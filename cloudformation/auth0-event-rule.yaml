@@ -1,0 +1,41 @@
+Parameters:
+  EventBusName:
+    Type: String
+    Description: The name of the event bus that the rule should apply to
+  UpdateUserFunctionArn:
+    Type: String
+    Description: The full arn to the lambda function to be invoked by the rule
+  UpdateUserFunctionName:
+    Type: String
+    Description: The lambda function name to be invoked by the rule
+  UserEventsLogGroupArn:
+    Type: String
+    Description: The full arn of the cloudwatch log group to store events
+Resources:
+  authzUserEventsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: auth0-user-events-rule
+      EventBusName: !Ref 'EventBusName'
+      EventPattern:
+        account:
+          - !Ref 'AWS::AccountId'
+        detail:
+          data:
+            type:
+              - ss
+              - svr
+              - sv
+      State: ENABLED
+      Targets:
+        - Arn: !Ref 'UpdateUserFunctionArn'
+          Id: UpdateUserFunctionLambdaTarget
+        - Arn: !Ref 'UserEventsLogGroupArn'
+          Id: CloudWatchLogTarget
+  PermissionForEventsToInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref 'UpdateUserFunctionName'
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt 'authzUserEventsRule.Arn'
